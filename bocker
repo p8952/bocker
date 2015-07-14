@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -o errexit -o nounset -o pipefail; shopt -s nullglob
+
+btrfs_path='/var/bocker';
+basename=$(which basename);	btrfs=$(which btrfs);	cat=$(which cat);
+mount=$(which mount);		umount=$(which umount);	chroot=$(which chroot)
+
+function CHECK_VOLUME() {
+if $btrfs subvolume list "$btrfs_path" | grep -qw "$1"; then
+	return 0
+else
+	echo "No image named '$1' exists"
+	exit 1
+fi
+}
+
+function INIT() {
+if [[ -d "$1" ]]; then
+	uuid="img_$(uuidgen)"
+	$btrfs subvolume create "$btrfs_path/$uuid" > /dev/null
+	cp -rf --reflink=auto "$1"/* "$btrfs_path/$uuid" > /dev/null
+	echo "$uuid"
+else
+	echo "No directory named '$1' exists"
+fi
+}
+
+function RM() {
+CHECK_VOLUME "$1"
+$btrfs subvolume delete "$btrfs_path/$1" > /dev/null
+}
+
+function IMAGES() {
+echo -e "IMAGE_ID"
+for img in "$btrfs_path"/img_*; do
+	$basename "$img"
+done
+}
+
+function PS() {
+echo -e "CONTAINER_ID\t\t\t\t\tCOMMAND"
+for ps in "$btrfs_path"/ps_*; do
+	ps=$($basename "$ps")
+	echo -e "$ps\t\t$($cat "$btrfs_path/$ps/$ps.cmd")"
+done
+}
+
+function RUN() {
+CHECK_VOLUME "$1"
+uuid="ps_$(uuidgen)"
+$btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
+echo "$2" > "$btrfs_path/$uuid/$uuid.cmd"
+./util-linux/unshare -fp --mount-proc "$chroot" "$btrfs_path/$uuid" \
+	/bin/bash -c "/bin/mount -t proc proc /proc && /bin/$2" \
+	2>&1 | tee "$btrfs_path/$uuid/$uuid.log"
+$umount "$btrfs_path/$uuid/proc"
+}
+
+function LOGS() {
+CHECK_VOLUME "$1"
+$cat "$btrfs_path/$1/$1.log"
+}
+
+function HELP() {
+echo -e "Create an image: \n\t./bocker init <image_directory>\n"
+echo -e "List images: \n\t./bocker images\n"
+echo -e "Create a container: \n\t./bocker run <image_id> <command>\n"
+echo -e "List containers: \n\t./bocker ps\n"
+echo -e "View logs from a container: \n\t./bocker logs <container_id>\n"
+echo -e "Delete an image or container: \n\t./bocker rm <image_or_container_id>\n"
+exit 0
+}
+
+[[ -z "${1-}" ]] && HELP
+case $1 in
+	init) INIT "$2" ;;
+	rm)	RM "$2" ;;
+	images) IMAGES ;;
+	ps) PS ;;
+	run)
+		IMAGE="$2"
+		shift && shift
+		RUN "$IMAGE" "$*"
+		;;
+	logs) LOGS "$2" ;;
+	*) HELP ;;
+esac
