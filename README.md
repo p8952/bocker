@@ -9,7 +9,7 @@ The following packages are needed to run bocker.
 * btrfs-progs 3.16.2
 
 
-Because RHEL/CentOS 7 does not ship a new enough version of util-linux you will need grab the sources from [here](https://www.kernel.org/pub/linux/utils/util-linux/v2.25/) and compile yourself.
+Because RHEL/CentOS 7 do not ship a new enough version of util-linux you will need grab the sources from [here](https://www.kernel.org/pub/linux/utils/util-linux/v2.25/) and compile it yourself.
 
 Additionally `/var/bocker` needs to be on a btrfs filesystem.
 
