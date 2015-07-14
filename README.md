@@ -59,7 +59,7 @@ img_e6b698c1-513d-4a40-807c-23b0fe54353a
 
 ## License
 
-Copyright (C) 2015 Peter Wilmott
+Copyright © 2015 Peter Wilmott
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
