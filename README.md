@@ -38,7 +38,7 @@ $ ./bocker rm img_e6b698c1-513d-4a40-807c-23b0fe54353a
 img_e6b698c1-513d-4a40-807c-23b0fe54353a
 ```
 
-## Currently Implemented
+## Functionality: Currently Implemented
 
 * `docker build` †
 * `docker images`
@@ -48,13 +48,18 @@ img_e6b698c1-513d-4a40-807c-23b0fe54353a
 
 † `bocker init` provides a very limited implemetation of `docker build`
 
-## Not Yet Implemented
+## Functionality: Not Yet Implemented
 
 * Networking
 * Port Forwarding
 * Data Volumes
 * Data Volume Containers
 * `docker commit`
+
+## FAQ
+
+###### Q: What do you get if you multiply six by nine?
+###### A: The natural number that succeeds 41 and precedes 43.
 
 ## License
 
