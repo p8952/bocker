@@ -1,8 +1,6 @@
 # Bocker
 Docker implemented in 100 lines of bash.
 
-## Table of Contents
-
   * [Prerequisites](#prerequisites)
   * [Example Usage](#example-usage)
   * [Functionality: Currently Implemented](#functionality-currently-implemented)
