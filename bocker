@@ -3,7 +3,7 @@ set -o errexit -o nounset -o pipefail; shopt -s nullglob
 
 btrfs_path='/var/bocker';
 basename=$(which basename);	btrfs=$(which btrfs);	cat=$(which cat);
-mount=$(which mount);		umount=$(which umount);	chroot=$(which chroot)
+unshare=$(which unshare);	umount=$(which umount);	chroot=$(which chroot)
 
 function CHECK_VOLUME() {
 if $btrfs subvolume list "$btrfs_path" | grep -qw "$1"; then
@@ -50,8 +50,8 @@ CHECK_VOLUME "$1"
 uuid="ps_$(uuidgen)"
 $btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
 echo "$2" > "$btrfs_path/$uuid/$uuid.cmd"
-./util-linux/unshare -fp --mount-proc "$chroot" "$btrfs_path/$uuid" \
-	/bin/bash -c "/bin/mount -t proc proc /proc && /bin/$2" \
+"$unshare" -fp --mount-proc "$chroot" "$btrfs_path/$uuid" \
+	/bin/sh -c "/bin/mount -t proc proc /proc && /bin/$2" \
 	2>&1 | tee "$btrfs_path/$uuid/$uuid.log"
 $umount "$btrfs_path/$uuid/proc"
 }
