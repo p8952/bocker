@@ -5,11 +5,10 @@ Docker implemented in 100 lines of bash.
 
 The following packages are needed to run bocker.
 
-* util-linux 2.25.2
-* btrfs-progs 3.16.2
+* util-linux >= 2.25.2
+* btrfs-progs
 
-
-Because RHEL/CentOS 7 do not ship a new enough version of util-linux you will need grab the sources from [here](https://www.kernel.org/pub/linux/utils/util-linux/v2.25/) and compile it yourself.
+Because most distributions do not ship a new enough version of util-linux you will probably need grab the sources from [here](https://www.kernel.org/pub/linux/utils/util-linux/v2.25/) and compile it yourself.
 
 Additionally `/var/bocker` needs to be on a btrfs filesystem.
 
