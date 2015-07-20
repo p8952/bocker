@@ -12,8 +12,6 @@ pip install git+https://github.com/larsks/undocker
 systemctl start docker.service
 docker pull busybox
 docker save busybox | undocker -o base-image
-rm -rf /vagrant/base-image
-mv base-image /vagrant || true
 
 git clone https://github.com/karelzak/util-linux.git
 cd util-linux
@@ -23,6 +21,8 @@ git checkout tags/v2.25.2
 make
 mv unshare /usr/bin/unshare
 cd ..
+
+ln -s /vagrant/bocker /usr/bin/bocker
 ) 2>&1
 SCRIPT
 
