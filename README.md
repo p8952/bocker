@@ -1,6 +1,13 @@
 # Bocker
 Docker implemented in 100 lines of bash.
 
+  * [Prerequisites](#prerequisites)
+  * [Example Usage](#example-usage)
+  * [Functionality: Currently Implemented](#functionality-currently-implemented)
+  * [Functionality: Not Yet Implemented](#functionality-not-yet-implemented)
+  * [FAQ](#faq)
+  * [License](#license)
+
 ## Prerequisites
 
 The following packages are needed to run bocker.
