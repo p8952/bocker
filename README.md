@@ -5,11 +5,10 @@ Docker implemented in 100 lines of bash.
 
 The following packages are needed to run bocker.
 
-* util-linux 2.25.2
-* btrfs-progs 3.16.2
+* util-linux >= 2.25.2
+* btrfs-progs
 
-
-Because RHEL/CentOS 7 do not ship a new enough version of util-linux you will need grab the sources from [here](https://www.kernel.org/pub/linux/utils/util-linux/v2.25/) and compile it yourself.
+Because most distributions do not ship a new enough version of util-linux you will probably need grab the sources from [here](https://www.kernel.org/pub/linux/utils/util-linux/v2.25/) and compile it yourself.
 
 Additionally `/var/bocker` needs to be on a btrfs filesystem.
 
@@ -39,7 +38,7 @@ $ ./bocker rm img_e6b698c1-513d-4a40-807c-23b0fe54353a
 img_e6b698c1-513d-4a40-807c-23b0fe54353a
 ```
 
-## Currently Implemented
+## Functionality: Currently Implemented
 
 * `docker build` †
 * `docker images`
@@ -49,13 +48,18 @@ img_e6b698c1-513d-4a40-807c-23b0fe54353a
 
 † `bocker init` provides a very limited implemetation of `docker build`
 
-## Not Yet Implemented
+## Functionality: Not Yet Implemented
 
 * Networking
 * Port Forwarding
 * Data Volumes
 * Data Volume Containers
 * `docker commit`
+
+## FAQ
+
+###### Q: What do you get if you multiply six by nine?
+###### A: The natural number that succeeds 41 and precedes 43.
 
 ## License
 
