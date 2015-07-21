@@ -66,7 +66,6 @@ img_74432
 
 ## Functionality: Not Yet Implemented
 
-* DNS
 * Port Forwarding
 * Data Volumes
 * Data Volume Containers

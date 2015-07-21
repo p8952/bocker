@@ -37,7 +37,7 @@ done
 }
 
 function PS() {
-echo -e "CONTAINER_ID\t\t\t\t\tCOMMAND"
+echo -e "CONTAINER_ID\t\tCOMMAND"
 for ps in "$btrfs_path"/ps_*; do
 	ps=$($basename "$ps")
 	echo -e "$ps\t\t$($cat "$btrfs_path/$ps/$ps.cmd")"
@@ -57,6 +57,7 @@ ip netns exec netns_"$uuid" ip addr add 10.0.0.2/24 dev veth1_"$uuid"
 ip netns exec netns_"$uuid" ip link set dev veth1_"$uuid" up
 ip netns exec netns_"$uuid" ip route add default via 10.0.0.1
 $btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
+echo 'nameserver 8.8.8.8' > "$btrfs_path/$uuid"/etc/resolv.conf
 echo "$2" > "$btrfs_path/$uuid/$uuid.cmd"
 ip netns exec netns_"$uuid" "$unshare" -fp --mount-proc "$chroot" \
 	"$btrfs_path/$uuid" /bin/sh -c "/bin/mount -t proc proc /proc && $2" \
