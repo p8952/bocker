@@ -11,10 +11,10 @@ Docker implemented in 100 lines of bash.
 
 The following packages are needed to run bocker.
 
-* util-linux >= 2.25.2
 * btrfs-progs
-* iptables
 * iproute2
+* iptables
+* util-linux >= 2.25.2
 
 Because most distributions do not ship a new enough version of util-linux you will probably need grab the sources from [here](https://www.kernel.org/pub/linux/utils/util-linux/v2.25/) and compile it yourself.
 
@@ -33,24 +33,57 @@ Even if you meet the above prerequisites you probably still want to **run bocker
 
 ```
 $ bocker init base-image/
-img_74432
+Created: img_84632
 
 $ bocker images
 IMAGE_ID
-img_74432
+img_84632
 
-$ bocker run img_74432 uname -sro
+$ bocker run img_84632 uname -sro
 Linux 3.10.0-123.20.1.el7.x86_64 GNU/Linux
 
 $ bocker ps
 CONTAINER_ID       COMMAND
-ps_43529           uname -sro
+ps_12277           uname -sro
 
-$ bocker rm ps_43529
-ps_43529
+$ bocker logs ps_12277
+Linux 3.10.0-123.20.1.el7.x86_64 GNU/Linux
 
-$ bocker rm img_74432
-img_74432
+$ bocker rm ps_12277
+Removed: ps_12277
+
+$ bocker run img_84632 which wget
+which: no wget in (/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin)
+
+$ bocker run img_84632 yum install -y wget
+Installing : wget-1.14-10.el7_0.1.x86_64                                  1/1
+Verifying  : wget-1.14-10.el7_0.1.x86_64                                  1/1
+Installed  : wget.x86_64 0:1.14-10.el7_0.1
+Complete!
+
+$ bocker ps
+CONTAINER_ID       COMMAND
+ps_14099           which wget
+ps_43377           yum install -y wget
+
+$bocker commit ps_43377 img_84632
+Removed: img_84632
+Created: img_84632
+
+$ bocker run img_84632 which wget
+/usr/bin/wget
+
+$ bocker rm ps_14099
+Removed: ps_14099
+
+$ bocker rm ps_43377
+Removed: ps_43377
+
+$ bocker rm ps_95942
+Removed: ps_95942
+
+$ bocker rm img_84632
+Removed: img_84632
 ```
 
 ## Functionality: Currently Implemented
@@ -59,6 +92,8 @@ img_74432
 * `docker images`
 * `docker ps`
 * `docker run`
+* `docker logs`
+* `docker commit`
 * `docker rm` / `docker rmi`
 * Networking
 
@@ -69,7 +104,6 @@ img_74432
 * Port Forwarding
 * Data Volumes
 * Data Volume Containers
-* `docker commit`
 
 ## License
 
