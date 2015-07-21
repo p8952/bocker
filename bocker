@@ -1,51 +1,47 @@
 #!/usr/bin/env bash
 set -o errexit -o nounset -o pipefail; shopt -s nullglob
-
-btrfs_path='/var/bocker'; basename=$(which basename); btrfs=$(which btrfs);
-cat=$(which cat);         unshare=$(which unshare);   chroot=$(which chroot)
-
-function CHECK_VOLUME() {
-if $btrfs subvolume list "$btrfs_path" | grep -qw "$1"; then
-	return 0
-else
-	echo "No image named '$1' exists"
-	exit 1
+btrfs_path='/var/bocker';
+function CHECK() {
+[[ "$1" == 'img' ]] && TYPE='image'
+[[ "$1" == 'ps' ]] && TYPE='container'
+[[ "$1" == '' ]] && TYPE='container or image'
+if [[ "$2" == "$1"* ]]; then
+	if btrfs subvolume list "$btrfs_path" | grep -qw "$2"; then
+		return 0
+	fi
 fi
+echo "No $TYPE named '$2' exists" && exit 1
 }
-
 function INIT() {
 if [[ -d "$1" ]]; then
 	uuid="img_$(shuf -i 10000-99999 -n 1)"
-	$btrfs subvolume create "$btrfs_path/$uuid" > /dev/null
+	btrfs subvolume create "$btrfs_path/$uuid" > /dev/null
 	cp -rf --reflink=auto "$1"/* "$btrfs_path/$uuid" > /dev/null
-	echo "$uuid"
+	echo "Created: $uuid"
 else
 	echo "No directory named '$1' exists"
 fi
 }
-
 function RM() {
-CHECK_VOLUME "$1"
-$btrfs subvolume delete "$btrfs_path/$1" > /dev/null
+CHECK '' "$1"
+btrfs subvolume delete "$btrfs_path/$1" > /dev/null
+echo "Removed: $1"
 }
-
 function IMAGES() {
 echo -e "IMAGE_ID"
 for img in "$btrfs_path"/img_*; do
-	$basename "$img"
+	basename "$img"
 done
 }
-
 function PS() {
 echo -e "CONTAINER_ID\t\tCOMMAND"
 for ps in "$btrfs_path"/ps_*; do
-	ps=$($basename "$ps")
-	echo -e "$ps\t\t$($cat "$btrfs_path/$ps/$ps.cmd")"
+	ps=$(basename "$ps")
+	echo -e "$ps\t\t$(cat "$btrfs_path/$ps/$ps.cmd")"
 done
 }
-
 function RUN() {
-CHECK_VOLUME "$1"
+CHECK 'img' "$1"
 uuid="ps_$(shuf -i 10000-99999 -n 1)"
 ip link add dev veth0_"$uuid" type veth peer name veth1_"$uuid"
 ip link set dev veth0_"$uuid" up
@@ -56,31 +52,33 @@ ip netns exec netns_"$uuid" ip link set dev lo up
 ip netns exec netns_"$uuid" ip addr add 10.0.0.2/24 dev veth1_"$uuid"
 ip netns exec netns_"$uuid" ip link set dev veth1_"$uuid" up
 ip netns exec netns_"$uuid" ip route add default via 10.0.0.1
-$btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
+btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
 echo 'nameserver 8.8.8.8' > "$btrfs_path/$uuid"/etc/resolv.conf
 echo "$2" > "$btrfs_path/$uuid/$uuid.cmd"
-ip netns exec netns_"$uuid" "$unshare" -fp --mount-proc "$chroot" \
+ip netns exec netns_"$uuid" "unshare" -fp --mount-proc "chroot" \
 	"$btrfs_path/$uuid" /bin/sh -c "/bin/mount -t proc proc /proc && $2" \
 	2>&1 | tee "$btrfs_path/$uuid/$uuid.log" || true
 ip link del dev veth0_"$uuid"
 ip netns del netns_"$uuid"
 }
-
 function LOGS() {
-CHECK_VOLUME "$1"
-$cat "$btrfs_path/$1/$1.log"
+CHECK 'ps' "$1"
+cat "$btrfs_path/$1/$1.log"
 }
-
+function COMMIT() {
+CHECK 'ps' "$1" && CHECK 'img' "$2" && RM "$2"
+btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$2" > /dev/null
+echo "Created: $2"
+}
 function HELP() {
 echo -e "Create an image: \n\t./bocker init <image_directory>\n"
 echo -e "List images: \n\t./bocker images\n"
 echo -e "Create a container: \n\t./bocker run <image_id> <command>\n"
 echo -e "List containers: \n\t./bocker ps\n"
 echo -e "View logs from a container: \n\t./bocker logs <container_id>\n"
-echo -e "Delete an image or container: \n\t./bocker rm <image_or_container_id>\n"
+echo -e "Delete an image or container: \n\t./bocker rm <image_or_container_id>"
 exit 0
 }
-
 [[ -z "${1-}" ]] && HELP
 case $1 in
 	init) INIT "$2" ;;
@@ -93,5 +91,6 @@ case $1 in
 		RUN "$IMAGE" "$*"
 		;;
 	logs) LOGS "$2" ;;
+	commit) COMMIT "$2" "$3" ;;
 	*) HELP ;;
 esac
