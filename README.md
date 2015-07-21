@@ -24,6 +24,7 @@ Additionally your system will need to be configured with the following.
 * A network bridge called `bridge0` and an IP of 10.0.0.1/24
 * IP forwarding enabled in `/proc/sys/net/ipv4/ip_forward`
 * A firewall routing traffic from `bridge0` to a physical interface.
+* A `base-image` which contains the filesystem to seed your container with.
 
 For ease of use a Vagrantfile is included which will build the needed environment.
 
