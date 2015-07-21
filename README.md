@@ -5,7 +5,6 @@ Docker implemented in 100 lines of bash.
   * [Example Usage](#example-usage)
   * [Functionality: Currently Implemented](#functionality-currently-implemented)
   * [Functionality: Not Yet Implemented](#functionality-not-yet-implemented)
-  * [FAQ](#faq)
   * [License](#license)
 
 ## Prerequisites
@@ -72,11 +71,6 @@ img_74432
 * Data Volumes
 * Data Volume Containers
 * `docker commit`
-
-## FAQ
-
-###### Q: What do you get if you multiply six by nine?
-###### A: The natural number that succeeds 41 and precedes 43.
 
 ## License
 
