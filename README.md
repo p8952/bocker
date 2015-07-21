@@ -17,32 +17,39 @@ The following packages are needed to run bocker.
 
 Because most distributions do not ship a new enough version of util-linux you will probably need grab the sources from [here](https://www.kernel.org/pub/linux/utils/util-linux/v2.25/) and compile it yourself.
 
-Additionally `/var/bocker` needs to be on a btrfs filesystem.
+Additionally your system will need to be configured with the following.
+
+* A btrfs filesystem mounted under `/var/bocker`
+* A network bridge called `bridge0` and an IP of 10.0.0.1/24
+* IP forwarding enabled in `/proc/sys/net/ipv4/ip_forward`
+* A firewall routing traffic from `bridge0` to a physical interface.
 
 For ease of use a Vagrantfile is included which will build the needed environment.
+
+Even if you meet the above prerequisites you probably still want to **run bocker in a virtual machine**. Bocker runs as root and among other things needs to make changes to your network interfaces, routing table, and firewall rules. **I can make no guarantees that it wont trash your system**.
 
 ## Example Usage
 
 ```
-$ ./bocker init base-image/
-img_e6b698c1-513d-4a40-807c-23b0fe54353a
+$ bocker init base-image/
+img_74432
 
-$ ./bocker images
+$ bocker images
 IMAGE_ID
-img_e6b698c1-513d-4a40-807c-23b0fe54353a
+img_74432
 
-$ ./bocker run img_e6b698c1-513d-4a40-807c-23b0fe54353a uname -sro
+$ bocker run img_74432 uname -sro
 Linux 3.10.0-123.20.1.el7.x86_64 GNU/Linux
 
-$ ./bocker ps
-CONTAINER_ID					            COMMAND
-ps_349bf646-06cf-4d98-bcf8-744f59e7e6bb		uname -sro
+$ bocker ps
+CONTAINER_ID       COMMAND
+ps_43529           uname -sro
 
-$ ./bocker rm ps_349bf646-06cf-4d98-bcf8-744f59e7e6bb
-ps_349bf646-06cf-4d98-bcf8-744f59e7e6bb
+$ bocker rm ps_43529
+ps_43529
 
-$ ./bocker rm img_e6b698c1-513d-4a40-807c-23b0fe54353a
-img_e6b698c1-513d-4a40-807c-23b0fe54353a
+$ bocker rm img_74432
+img_74432
 ```
 
 ## Functionality: Currently Implemented
@@ -52,12 +59,13 @@ img_e6b698c1-513d-4a40-807c-23b0fe54353a
 * `docker ps`
 * `docker run`
 * `docker rm` / `docker rmi`
+* Networking
 
 † `bocker init` provides a very limited implemetation of `docker build`
 
 ## Functionality: Not Yet Implemented
 
-* Networking
+* DNS
 * Port Forwarding
 * Data Volumes
 * Data Volume Containers

@@ -10,8 +10,8 @@ mount -o loop ~/btrfs.img /var/bocker
 
 pip install git+https://github.com/larsks/undocker
 systemctl start docker.service
-docker pull busybox
-docker save busybox | undocker -o base-image
+docker pull centos
+docker save centos | undocker -o base-image
 
 git clone https://github.com/karelzak/util-linux.git
 cd util-linux
@@ -23,6 +23,15 @@ mv unshare /usr/bin/unshare
 cd ..
 
 ln -s /vagrant/bocker /usr/bin/bocker
+
+echo 1 > /proc/sys/net/ipv4/ip_forward
+iptables --flush
+iptables -t nat -A POSTROUTING -o bridge0 -j MASQUERADE
+iptables -t nat -A POSTROUTING -o enp0s3 -j MASQUERADE
+
+ip link add bridge0 type bridge
+ip addr add 10.0.0.1/24 dev bridge0
+ip link set bridge0 up
 ) 2>&1
 SCRIPT
 

@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 set -o errexit -o nounset -o pipefail; shopt -s nullglob
 
-btrfs_path='/var/bocker';
-basename=$(which basename);	btrfs=$(which btrfs);	cat=$(which cat);
-unshare=$(which unshare);	umount=$(which umount);	chroot=$(which chroot)
+btrfs_path='/var/bocker'; basename=$(which basename); btrfs=$(which btrfs);
+cat=$(which cat);         unshare=$(which unshare);   chroot=$(which chroot)
 
 function CHECK_VOLUME() {
 if $btrfs subvolume list "$btrfs_path" | grep -qw "$1"; then
@@ -16,7 +15,7 @@ fi
 
 function INIT() {
 if [[ -d "$1" ]]; then
-	uuid="img_$(uuidgen)"
+	uuid="img_$(shuf -i 10000-99999 -n 1)"
 	$btrfs subvolume create "$btrfs_path/$uuid" > /dev/null
 	cp -rf --reflink=auto "$1"/* "$btrfs_path/$uuid" > /dev/null
 	echo "$uuid"
@@ -47,13 +46,23 @@ done
 
 function RUN() {
 CHECK_VOLUME "$1"
-uuid="ps_$(uuidgen)"
+uuid="ps_$(shuf -i 10000-99999 -n 1)"
+ip link add dev veth0_"$uuid" type veth peer name veth1_"$uuid"
+ip link set dev veth0_"$uuid" up
+ip link set veth0_"$uuid" master bridge0
+ip netns add netns_"$uuid"
+ip link set veth1_"$uuid" netns netns_"$uuid"
+ip netns exec netns_"$uuid" ip link set dev lo up
+ip netns exec netns_"$uuid" ip addr add 10.0.0.2/24 dev veth1_"$uuid"
+ip netns exec netns_"$uuid" ip link set dev veth1_"$uuid" up
+ip netns exec netns_"$uuid" ip route add default via 10.0.0.1
 $btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
 echo "$2" > "$btrfs_path/$uuid/$uuid.cmd"
-"$unshare" -fp --mount-proc "$chroot" "$btrfs_path/$uuid" \
-	/bin/sh -c "/bin/mount -t proc proc /proc && /bin/$2" \
-	2>&1 | tee "$btrfs_path/$uuid/$uuid.log"
-$umount "$btrfs_path/$uuid/proc"
+ip netns exec netns_"$uuid" "$unshare" -fp --mount-proc "$chroot" \
+	"$btrfs_path/$uuid" /bin/sh -c "/bin/mount -t proc proc /proc && $2" \
+	2>&1 | tee "$btrfs_path/$uuid/$uuid.log" || true
+ip link del dev veth0_"$uuid"
+ip netns del netns_"$uuid"
 }
 
 function LOGS() {
