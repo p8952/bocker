@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+exit_code=0
+for t in test/test_*; do
+	bash "$t"
+	if [[ $? == 0 ]]; then
+		echo "PASSED: $t"
+	else
+		echo "FAILED: $t"
+		exit_code=1
+	fi
+done
+exit "$exit_code"

@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+[ "$(wc -l < bocker)" -le 100 ]
