@@ -71,21 +71,21 @@ btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$2" > /dev/null
 echo "Created: $2"
 }
 function HELP() {
-sed -n "s/\\\\n/\n\t/g;s/$/\n/;s/^.*#HELP\\s//p;" < $1
+sed -n "s/\\\\n/\n\t/g;s/BOCKER/${1/\//\\\/}/g;s/$/\n/;s/^.*#HELP\\s//p;" < $1
 exit 0
 }
 [[ -z "${1-}" ]] && HELP $0
 case $1 in
-	init) INIT "$2" ;; #HELP Create an image:\n./bocker init <image_directory>
-	images) IMAGES ;; #HELP List images:\n./bocker images
-	run) #HELP Create a container:\n./bocker run <image_id> <command>
+	init) INIT "$2" ;; #HELP Create an image:\nBOCKER init <image_directory>
+	images) IMAGES ;; #HELP List images:\nBOCKER images
+	run) #HELP Create a container:\nBOCKER run <image_id> <command>
 		IMAGE="$2"
 		shift && shift
 		RUN "$IMAGE" "$*"
 		;;
-	ps) PS ;; #HELP List containers:\n./bocker ps
-	logs) LOGS "$2" ;; #HELP View logs from a container:\n./bocker logs <container_id>
-	commit) COMMIT "$2" "$3" ;; #HELP Commit a container to the image:\n./bocker commit <container_id> <image_id>
-	rm)	RM "$2" ;; #HELP Delete an image or container:\n./bocker rm <image_id or container_id>
-	*) HELP $0 ;; #HELP Display this message:\n./bocker help
+	ps) PS ;; #HELP List containers:\nBOCKER ps
+	logs) LOGS "$2" ;; #HELP View logs from a container:\nBOCKER logs <container_id>
+	commit) COMMIT "$2" "$3" ;; #HELP Commit a container to the image:\nBOCKER commit <container_id> <image_id>
+	rm)	RM "$2" ;; #HELP Delete an image or container:\nBOCKER rm <image_id or container_id>
+	*) HELP $0 ;; #HELP Display this message:\nBOCKER help
 esac
