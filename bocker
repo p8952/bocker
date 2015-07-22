@@ -72,9 +72,8 @@ echo "Created: $2"
 }
 function HELP() {
 sed -n "s/\\\\n/\n\t/g;s/BOCKER/${1/\//\\\/}/g;s/$/\n/;s/^.*#HELP\\s//p;" < $1
-exit 0
 }
-[[ -z "${1-}" ]] && HELP $0
+[[ -z "${1-}" ]] && HELP $0 && exit 0
 case $1 in
 	init) INIT "$2" ;; #HELP Create an image:\nBOCKER init <image_directory>
 	images) IMAGES ;; #HELP List images:\nBOCKER images
