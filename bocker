@@ -71,7 +71,7 @@ btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$2" > /dev/null
 echo "Created: $2"
 }
 function HELP() {
-sed -n "s/^.*#HELP\\s//p;" < $1 | sed "s/\\\\n/\n\t/g;s/BOCKER/${1/\//\\\/}/g;s/$/\n/;"
+sed -n "s/^.*#HELP\\s//p;" < $1 | sed "s/\\\\n/\n\t/g;s/$/\n/;s!BOCKER!${1/!/\\!}!g"
 }
 [[ -z "${1-}" ]] && HELP $0 && exit 0
 case $1 in
