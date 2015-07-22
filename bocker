@@ -85,7 +85,7 @@ case $1 in
 		;;
 	ps) PS ;; #HELP List containers:\n./bocker ps
 	logs) LOGS "$2" ;; #HELP View logs from a container:\n./bocker logs <container_id>
-	commit) COMMIT "$2" "$3" ;;
+	commit) COMMIT "$2" "$3" ;; #HELP Commit a container to the image:\n./bocker commit <container_id> <image_id>
 	rm)	RM "$2" ;; #HELP Delete an image or container:\n./bocker rm <image_id or container_id>
-	*) HELP $0 ;;
+	*) HELP $0 ;; #HELP Display this message:\n./bocker help
 esac
