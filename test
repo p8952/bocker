@@ -1,2 +1,2 @@
 #!/bin/sh
-[ `cat bocker | wc -l` -le 100 ] || exit 1
+[ `wc -l < bocker` -le 100 ]
