@@ -2,19 +2,16 @@
 set -o errexit -o nounset -o pipefail; shopt -s nullglob
 btrfs_path='/var/bocker';
 function bocker_check() {
-[[ "$1" == 'img' ]] && TYPE='image'
-[[ "$1" == 'ps' ]] && TYPE='container'
-[[ "$1" == '' ]] && TYPE='container or image'
-if [[ "$2" == "$1"* ]]; then
-	if btrfs subvolume list "$btrfs_path" | grep -qw "$2"; then
-		return 0
-	fi
+if btrfs subvolume list "$btrfs_path" | grep -qw "$1"; then
+	echo 0
+else
+	echo 1
 fi
-echo "No $TYPE named '$2' exists" && exit 1
 }
 function bocker_init() { #HELP Create an image:\nBOCKER init <image_directory>
+uuid="img_$(shuf -i 42002-42254 -n 1)"
 if [[ -d "$1" ]]; then
-	uuid="img_$(shuf -i 10000-99999 -n 1)"
+	[[ "$(bocker_check "$uuid")" == 0 ]] && bocker_run "$@"
 	btrfs subvolume create "$btrfs_path/$uuid" > /dev/null
 	cp -rf --reflink=auto "$1"/* "$btrfs_path/$uuid" > /dev/null
 	echo "Created: $uuid"
@@ -23,7 +20,7 @@ else
 fi
 }
 function bocker_rm() { #HELP Delete an image or container:\nBOCKER rm <image_id or container_id>
-bocker_check '' "$1"
+[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
 btrfs subvolume delete "$btrfs_path/$1" > /dev/null
 echo "Removed: $1"
 }
@@ -41,16 +38,18 @@ for ps in "$btrfs_path"/ps_*; do
 done
 }
 function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <command
-bocker_check 'img' "$1"
-cmd=${@:2}
-uuid="ps_$(shuf -i 10000-99999 -n 1)"
+uuid="ps_$(shuf -i 42002-42254 -n 1)";
+[[ "$(bocker_check "$1")" == 1 ]] && echo "No image named '$1' exists" && exit 1
+[[ "$(bocker_check "$uuid")" == 0 ]] && echo "UUID conflict, retrying..." && bocker_run "$@" && return
+cmd=${@:2} && ip="$(echo "${uuid: -3}" | sed 's/0//g')" && mac="${uuid: -3:1}:${uuid: -2}"
 ip link add dev veth0_"$uuid" type veth peer name veth1_"$uuid"
 ip link set dev veth0_"$uuid" up
 ip link set veth0_"$uuid" master bridge0
 ip netns add netns_"$uuid"
 ip link set veth1_"$uuid" netns netns_"$uuid"
 ip netns exec netns_"$uuid" ip link set dev lo up
-ip netns exec netns_"$uuid" ip addr add 10.0.0.2/24 dev veth1_"$uuid"
+ip netns exec netns_"$uuid" ip link set veth1_"$uuid" address 02:42:ac:11:00"$mac"
+ip netns exec netns_"$uuid" ip addr add 10.0.0."$ip"/24 dev veth1_"$uuid"
 ip netns exec netns_"$uuid" ip link set dev veth1_"$uuid" up
 ip netns exec netns_"$uuid" ip route add default via 10.0.0.1
 btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
@@ -63,12 +62,13 @@ ip link del dev veth0_"$uuid"
 ip netns del netns_"$uuid"
 }
 function bocker_logs() { #HELP View logs from a container:\nBOCKER logs <container_id>
-bocker_check 'ps' "$1"
+[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
 cat "$btrfs_path/$1/$1.log"
 }
 function bocker_commit() { #HELP Commit a container to an image:\nBOCKER commit <container_id> <image_id>
-bocker_check 'ps' "$1" && bocker_check 'img' "$2" && bocker_rm "$2"
-btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$2" > /dev/null
+[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
+[[ "$(bocker_check "$2")" == 1 ]] && echo "No image named '$1' exists" && exit 1
+bocker_rm "$2" && btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$2" > /dev/null
 echo "Created: $2"
 }
 function bocker_help() { #HELP Display this message:\nBOCKER help
