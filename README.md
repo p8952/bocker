@@ -15,6 +15,7 @@ The following packages are needed to run bocker.
 * iproute2
 * iptables
 * util-linux >= 2.25.2
+* coreutils >= 7.5
 
 Because most distributions do not ship a new enough version of util-linux you will probably need grab the sources from [here](https://www.kernel.org/pub/linux/utils/util-linux/v2.25/) and compile it yourself.
 
