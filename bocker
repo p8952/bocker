@@ -70,13 +70,19 @@ CHECK 'ps' "$1" && CHECK 'img' "$2" && RM "$2"
 btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$2" > /dev/null
 echo "Created: $2"
 }
+function EXEC() {
+CHECK 'ps' "$1"
+CID=$(ps -u | grep unshare | grep "$1" | awk '{ print $2 }')
+nsenter --target $CID --mount --uts --ipc --net --pid --root=/var/bocker/$1 -- $2 
+}
 function HELP() {
 echo -e "Create an image: \n\t./bocker init <image_directory>\n"
 echo -e "List images: \n\t./bocker images\n"
 echo -e "Create a container: \n\t./bocker run <image_id> <command>\n"
 echo -e "List containers: \n\t./bocker ps\n"
 echo -e "View logs from a container: \n\t./bocker logs <container_id>\n"
-echo -e "Delete an image or container: \n\t./bocker rm <image_or_container_id>"
+echo -e "Delete an image or container: \n\t./bocker rm <image_or_container_id>\n"
+echo -e "Exec in a container: \n\t./bocker exec <image_id> <command>"
 exit 0
 }
 [[ -z "${1-}" ]] && HELP
@@ -92,5 +98,10 @@ case $1 in
 		;;
 	logs) LOGS "$2" ;;
 	commit) COMMIT "$2" "$3" ;;
+	exec)
+		CONTAINER="$2"
+		shift && shift
+		EXEC "$CONTAINER" "$*"
+		;;
 	*) HELP ;;
 esac
