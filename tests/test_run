@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -o errexit -o nounset -o pipefail
+
+function bocker_run_test() {
+./bocker run "$1" "$2" > /dev/null
+ps="$(./bocker ps | grep "$2" | awk '{print $1}')"
+logs="$(./bocker logs "$ps")"
+if [[ "$logs" == *"$3"* ]]; then
+	echo 0
+else
+	echo 1
+fi
+}
+
+img="$(./bocker init ~/base-image | awk '{print $2}')"
+./bocker images | grep -qw "$img"
+[[ "$?" == 0 ]]
+
+[[ "$(bocker_run_test "$img" 'echo foo' 'foo')" == 0 ]]
+[[ "$(bocker_run_test "$img" 'uname' 'Linux')" == 0 ]]
+[[ "$(bocker_run_test "$img" 'cat /proc/self/stat' '3 (cat)')" == 0 ]]
+[[ "$(bocker_run_test "$img" 'ip addr' 'veth1_ps_')" == 0 ]]
+[[ "$(bocker_run_test "$img" 'ping -c 1 8.8.8.8' '0% packet loss')" == 0 ]]
+[[ "$(bocker_run_test "$img" 'ping -c 1 google.com' '0% packet loss')" == 0 ]]

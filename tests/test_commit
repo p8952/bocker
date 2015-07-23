@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -o errexit -o nounset -o pipefail
+
+img="$(./bocker init ~/base-image | awk '{print $2}')"
+./bocker images | grep -qw "$img"
+[[ "$?" == 0 ]]
+
+./bocker run "$img" which wget
+ps="$(./bocker ps | grep 'which wget' | awk '{print $1}')"
+logs="$(./bocker logs "$ps")"
+./bocker rm "$ps"
+[[ "$logs" == "which: no wget in"* ]]
+
+./bocker run "$img" yum install -y wget
+ps="$(./bocker ps | grep 'yum install -y wget' | awk '{print $1}')"
+./bocker commit "$ps" "$img"
+
+./bocker run "$img" which wget
+ps="$(./bocker ps | grep 'which wget' | awk '{print $1}')"
+logs="$(./bocker logs "$ps")"
+[[ "$logs" == '/usr/bin/wget' ]]

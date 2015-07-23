@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -o errexit -o nounset -o pipefail
+
+[[ "$(./bocker ps | head -n 1)" == 'CONTAINER_ID		COMMAND' ]]

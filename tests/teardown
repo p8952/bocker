@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -o errexit -o nounset -o pipefail
+
+for img in $(./bocker images | grep 'img'); do
+	./bocker rm "$img"
+done
+
+for ps in $(./bocker ps | grep 'ps' | awk '{print $1}'); do
+	./bocker rm "$ps"
+done
