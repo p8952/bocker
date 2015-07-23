@@ -98,7 +98,7 @@ Removed: img_84632
 * `docker rm` / `docker rmi`
 * Networking
 
-† `bocker init` provides a very limited implemetation of `docker build`
+† `bocker init` provides a very limited implementation of `docker build`
 
 ## Functionality: Not Yet Implemented
 
