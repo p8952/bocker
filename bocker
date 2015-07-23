@@ -12,7 +12,7 @@ if [[ "$2" == "$1"* ]]; then
 fi
 echo "No $TYPE named '$2' exists" && exit 1
 }
-function bocker_init() {
+function bocker_init() { #HELP Create an image:\nBOCKER init <image_directory>
 if [[ -d "$1" ]]; then
 	uuid="img_$(shuf -i 10000-99999 -n 1)"
 	btrfs subvolume create "$btrfs_path/$uuid" > /dev/null
@@ -22,25 +22,25 @@ else
 	echo "No directory named '$1' exists"
 fi
 }
-function bocker_rm() {
+function bocker_rm() { #HELP Delete an image or container:\nBOCKER rm <image_id or container_id>
 bocker_check '' "$1"
 btrfs subvolume delete "$btrfs_path/$1" > /dev/null
 echo "Removed: $1"
 }
-function bocker_images() {
+function bocker_images() { #HELP List images:\nBOCKER images
 echo -e "IMAGE_ID"
 for img in "$btrfs_path"/img_*; do
 	basename "$img"
 done
 }
-function bocker_ps() {
+function bocker_ps() { #HELP List containers:\nBOCKER ps
 echo -e "CONTAINER_ID\t\tCOMMAND"
 for ps in "$btrfs_path"/ps_*; do
 	ps=$(basename "$ps")
 	echo -e "$ps\t\t$(cat "$btrfs_path/$ps/$ps.cmd")"
 done
 }
-function bocker_run() {
+function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <command
 bocker_check 'img' "$1"
 cmd=${@:2}
 uuid="ps_$(shuf -i 10000-99999 -n 1)"
@@ -62,26 +62,20 @@ ip netns exec netns_"$uuid" "unshare" -fp --mount-proc "chroot" \
 ip link del dev veth0_"$uuid"
 ip netns del netns_"$uuid"
 }
-function bocker_logs() {
+function bocker_logs() { #HELP View logs from a container:\nBOCKER logs <container_id>
 bocker_check 'ps' "$1"
 cat "$btrfs_path/$1/$1.log"
 }
-function bocker_commit() {
+function bocker_commit() { #HELP Commit a container to an image:\nBOCKER commit <container_id> <image_id>
 bocker_check 'ps' "$1" && bocker_check 'img' "$2" && bocker_rm "$2"
 btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$2" > /dev/null
 echo "Created: $2"
 }
-function bocker_help() {
-echo -e "Create an image: \n\t./bocker init <image_directory>\n"
-echo -e "List images: \n\t./bocker images\n"
-echo -e "Create a container: \n\t./bocker run <image_id> <command>\n"
-echo -e "List containers: \n\t./bocker ps\n"
-echo -e "View logs from a container: \n\t./bocker logs <container_id>\n"
-echo -e "Delete an image or container: \n\t./bocker rm <image_or_container_id>"
-exit 0
+function bocker_help() { #HELP Display this message:\nBOCKER help
+sed -n "s/^.*#HELP\\s//p;" < "$1" | sed "s/\\\\n/\n\t/g;s/$/\n/;s!BOCKER!${1/!/\\!}!g"
 }
-[[ -z "${1-}" ]] && bocker_help
+[[ -z "${1-}" ]] && bocker_help "$0"
 case $1 in
 	init|rm|images|ps|run|logs|commit) bocker_"$1" "${@:2}" ;;
-	*) bocker_help ;;
+	*) bocker_help "$0" ;;
 esac
