@@ -2,11 +2,7 @@
 set -o errexit -o nounset -o pipefail; shopt -s nullglob
 btrfs_path='/var/bocker';
 function bocker_check() {
-if btrfs subvolume list "$btrfs_path" | grep -qw "$1"; then
-	echo 0
-else
-	echo 1
-fi
+btrfs subvolume list "$btrfs_path" | grep -qw "$1" && echo 0 || echo 1
 }
 function bocker_init() { #HELP Create an image:\nBOCKER init <image_directory>
 uuid="img_$(shuf -i 42002-42254 -n 1)"
@@ -38,7 +34,7 @@ for ps in "$btrfs_path"/ps_*; do
 done
 }
 function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <command
-uuid="ps_$(shuf -i 42002-42254 -n 1)";
+uuid="ps_$(shuf -i 42002-42254 -n 1)"
 [[ "$(bocker_check "$1")" == 1 ]] && echo "No image named '$1' exists" && exit 1
 [[ "$(bocker_check "$uuid")" == 0 ]] && echo "UUID conflict, retrying..." && bocker_run "$@" && return
 cmd=${@:2} && ip="$(echo "${uuid: -3}" | sed 's/0//g')" && mac="${uuid: -3:1}:${uuid: -2}"
