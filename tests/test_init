@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -o errexit -o nounset -o pipefail
+
+[[ "$(./bocker init ~/base-image)" ==  'Created: img_'* ]]

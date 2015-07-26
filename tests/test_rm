@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -o errexit -o nounset -o pipefail
+
+img="$(./bocker init ~/base-image | awk '{print $2}')"
+cmd="echo $RANDOM"
+./bocker run "$img" "$cmd"
+ps="$(./bocker ps | grep "$cmd" | awk '{print $1}')"
+
+[[ "$(./bocker images | grep -c "$img")" == 1 ]]
+[[ "$(./bocker ps | grep -c "$cmd")" == 1 ]]
+
+./bocker rm "$img"
+./bocker rm "$ps"
+
+[[ "$(./bocker images | grep -c "$img")" == 0 ]]
+[[ "$(./bocker ps | grep -c "$cmd")" == 0 ]]
