@@ -57,6 +57,10 @@ ip netns exec netns_"$uuid" "unshare" -fp --mount-proc "chroot" \
 ip link del dev veth0_"$uuid"
 ip netns del netns_"$uuid"
 }
+function bocker_exec() { #HELP Run bash (default) or comnmands in a container:\nBOCKER exec <container_id> <command
+[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
+cmd=${@:2} && CID=$(ps xao ppid,pid,cmd | grep $(ps -u | grep unshare | grep "$1" | awk '{ print $2 }') | grep -v unshare | awk '{ print $2 }') && nsenter --target $CID --mount --uts --ipc --net --pid chroot "$btrfs_path/$1" $cmd
+}
 function bocker_logs() { #HELP View logs from a container:\nBOCKER logs <container_id>
 [[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
 cat "$btrfs_path/$1/$1.log"
@@ -72,6 +76,6 @@ sed -n "s/^.*#HELP\\s//p;" < "$1" | sed "s/\\\\n/\n\t/g;s/$/\n/;s!BOCKER!${1/!/\
 }
 [[ -z "${1-}" ]] && bocker_help "$0"
 case $1 in
-	init|rm|images|ps|run|logs|commit) bocker_"$1" "${@:2}" ;;
+	init|rm|images|ps|run|exec|logs|commit) bocker_"$1" "${@:2}" ;;
 	*) bocker_help "$0" ;;
 esac
