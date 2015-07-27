@@ -2,14 +2,14 @@
 set -o errexit -o nounset -o pipefail
 
 function bocker_run_test() {
-./bocker run "$1" "$2" > /dev/null
-ps="$(./bocker ps | grep "$2" | awk '{print $1}')"
-logs="$(./bocker logs "$ps")"
-if [[ "$logs" == *"$3"* ]]; then
-	echo 0
-else
-	echo 1
-fi
+	./bocker run "$1" "$2" > /dev/null
+	ps="$(./bocker ps | grep "$2" | awk '{print $1}')"
+	logs="$(./bocker logs "$ps")"
+	if [[ "$logs" == *"$3"* ]]; then
+		echo 0
+	else
+		echo 1
+	fi
 }
 
 img="$(./bocker init ~/base-image | awk '{print $2}')"
