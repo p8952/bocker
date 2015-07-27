@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -o errexit -o nounset -o pipefail
 
-for img in $(./bocker images | grep 'img'); do
+for img in $(./bocker images | grep 'img' | awk '{print $1}'); do
 	./bocker rm "$img"
 done
 

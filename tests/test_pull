@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -o errexit -o nounset -o pipefail
+
+centos_img="$(./bocker pull centos 7 2> /dev/null | awk '{print $2}')"
+./bocker run "$centos_img" cat /etc/redhat-release
+ps="$(./bocker ps | grep 'cat /etc/redhat-release' | awk '{print $1}')"
+logs="$(./bocker logs "$ps")"
+./bocker rm "$ps"
+[[ "$logs" == "CentOS Linux release 7"* ]]
+
+ubuntu_img="$(./bocker pull ubuntu 14.04 2> /dev/null | awk '{print $2}')"
+./bocker run "$ubuntu_img" tail -n1 /etc/lsb-release
+ps="$(./bocker ps | grep 'tail -n1 /etc/lsb-release' | awk '{print $1}')"
+logs="$(./bocker logs "$ps")"
+./bocker rm "$ps"
+[[ "$logs" == *"Ubuntu 14.04"* ]]

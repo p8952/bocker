@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -o errexit -o nounset -o pipefail
 
-[[ "$(./bocker images | head -n 1)" == 'IMAGE_ID' ]]
+[[ "$(./bocker images | head -n 1)" == 'IMAGE_ID		SOURCE' ]]

@@ -12,6 +12,7 @@ Docker implemented in 100 lines of bash.
 The following packages are needed to run bocker.
 
 * btrfs-progs
+* curl
 * iproute2
 * iptables
 * util-linux >= 2.25.2
@@ -34,30 +35,33 @@ Even if you meet the above prerequisites you probably still want to **run bocker
 ## Example Usage
 
 ```
-$ bocker init base-image/
-Created: img_84632
+$ bocker pull centos 7
+######################################################################## 100.0%
+######################################################################## 100.0%
+######################################################################## 100.0%
+Created: img_42150
 
 $ bocker images
-IMAGE_ID
-img_84632
+IMAGE_ID        SOURCE
+img_42150       centos:7
 
-$ bocker run img_84632 uname -sro
-Linux 3.10.0-123.20.1.el7.x86_64 GNU/Linux
+$ bocker run img_42150 cat /etc/centos-release
+CentOS Linux release 7.1.1503 (Core)
 
 $ bocker ps
 CONTAINER_ID       COMMAND
-ps_12277           uname -sro
+ps_42045           cat /etc/centos-release
 
-$ bocker logs ps_12277
-Linux 3.10.0-123.20.1.el7.x86_64 GNU/Linux
+$ bocker logs ps_42045
+CentOS Linux release 7.1.1503 (Core)
 
-$ bocker rm ps_12277
-Removed: ps_12277
+$ bocker rm ps_42045
+Removed: ps_42045
 
-$ bocker run img_84632 which wget
+$ bocker run img_42150 which wget
 which: no wget in (/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin)
 
-$ bocker run img_84632 yum install -y wget
+$ bocker run img_42150 yum install -y wget
 Installing : wget-1.14-10.el7_0.1.x86_64                                  1/1
 Verifying  : wget-1.14-10.el7_0.1.x86_64                                  1/1
 Installed  : wget.x86_64 0:1.14-10.el7_0.1
@@ -65,35 +69,25 @@ Complete!
 
 $ bocker ps
 CONTAINER_ID       COMMAND
-ps_14099           which wget
-ps_43377           yum install -y wget
+ps_42018           yum install -y wget
+ps_42182           which wget
 
-$bocker commit ps_43377 img_84632
-Removed: img_84632
-Created: img_84632
+$ bocker commit ps_42018 img_42150
+Removed: img_42150
+Created: img_42150
 
-$ bocker run img_84632 which wget
+$ bocker run img_42150 which wget
 /usr/bin/wget
-
-$ bocker rm ps_14099
-Removed: ps_14099
-
-$ bocker rm ps_43377
-Removed: ps_43377
-
-$ bocker rm ps_95942
-Removed: ps_95942
-
-$ bocker rm img_84632
-Removed: img_84632
 ```
 
 ## Functionality: Currently Implemented
 
 * `docker build` †
+* `docker pull`
 * `docker images`
 * `docker ps`
 * `docker run`
+* `docker exec`
 * `docker logs`
 * `docker commit`
 * `docker rm` / `docker rmi`
@@ -103,9 +97,10 @@ Removed: img_84632
 
 ## Functionality: Not Yet Implemented
 
-* Port Forwarding
-* Data Volumes
 * Data Volume Containers
+* Data Volumes
+* Port Forwarding
+* Quota Support / CGroups
 
 ## License
 
