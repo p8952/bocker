@@ -33,7 +33,7 @@ for ps in "$btrfs_path"/ps_*; do
 	echo -e "$ps\t\t$(cat "$btrfs_path/$ps/$ps.cmd")"
 done
 }
-function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <command
+function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <command>
 uuid="ps_$(shuf -i 42002-42254 -n 1)"
 [[ "$(bocker_check "$1")" == 1 ]] && echo "No image named '$1' exists" && exit 1
 [[ "$(bocker_check "$uuid")" == 0 ]] && echo "UUID conflict, retrying..." && bocker_run "$@" && return
@@ -51,15 +51,16 @@ ip netns exec netns_"$uuid" ip route add default via 10.0.0.1
 btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
 echo 'nameserver 8.8.8.8' > "$btrfs_path/$uuid"/etc/resolv.conf
 echo "$cmd" > "$btrfs_path/$uuid/$uuid.cmd"
-ip netns exec netns_"$uuid" "unshare" -fp --mount-proc "chroot" \
+ip netns exec netns_"$uuid" "unshare" -fmuip --mount-proc "chroot" \
 	"$btrfs_path/$uuid" /bin/sh -c "/bin/mount -t proc proc /proc && $cmd" \
 	2>&1 | tee "$btrfs_path/$uuid/$uuid.log" || true
 ip link del dev veth0_"$uuid"
 ip netns del netns_"$uuid"
 }
-function bocker_exec() { #HELP Run bash (default) or comnmands in a container:\nBOCKER exec <container_id> <command
+function bocker_exec() { #HELP Execute a command in an existing container:\nBOCKER exec <container_id> <command>
 [[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
-cmd=${@:2} && CID=$(ps xao ppid,pid,cmd | grep $(ps -u | grep unshare | grep "$1" | awk '{ print $2 }') | grep -v unshare | awk '{ print $2 }') && nsenter --target $CID --mount --uts --ipc --net --pid chroot "$btrfs_path/$1" $cmd
+cmd=${@:2} && cid=$(ps xao ppid,pid,cmd | grep "$(ps -u | grep unshare | grep "$1" | awk '{ print $2 }')" | grep -v unshare | awk '{ print $2 }')
+nsenter -t "$cid" -muinp chroot "$btrfs_path/$1" "$cmd"
 }
 function bocker_logs() { #HELP View logs from a container:\nBOCKER logs <container_id>
 [[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
