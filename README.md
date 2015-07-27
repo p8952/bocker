@@ -15,6 +15,7 @@ The following packages are needed to run bocker.
 * curl
 * iproute2
 * iptables
+* libcgroup-tools
 * util-linux >= 2.25.2
 * coreutils >= 7.5
 
@@ -92,6 +93,7 @@ $ bocker run img_42150 which wget
 * `docker commit`
 * `docker rm` / `docker rmi`
 * Networking
+* Quota Support / CGroups
 
 † `bocker init` provides a very limited implementation of `docker build`
 
@@ -100,7 +102,6 @@ $ bocker run img_42150 which wget
 * Data Volume Containers
 * Data Volumes
 * Port Forwarding
-* Quota Support / CGroups
 
 ## License
 
