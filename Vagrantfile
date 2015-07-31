@@ -1,7 +1,7 @@
 $script = <<SCRIPT
 (
 rpm -i https://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
-yum install -y -q autoconf automake btrfs-progs docker gettext-devel git libtool python-pip
+yum install -y -q autoconf automake btrfs-progs docker gettext-devel git libcgroup-tools libtool python-pip
 
 fallocate -l 10G ~/btrfs.img
 mkdir /var/bocker
