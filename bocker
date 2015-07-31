@@ -78,8 +78,11 @@ function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <comman
 	cgcreate -g "$cgroups:/$uuid"
 	cgset -r cpuset.cpus=0-1 "$uuid" &&	cgset -r cpuset.mems=0 "$uuid"
 	cgset -r memory.limit_in_bytes=512000000 "$uuid"
-	cgexec -g "$cgroups:$uuid" ip netns exec netns_"$uuid" "unshare" -fmuip --mount-proc "chroot" \
-		"$btrfs_path/$uuid" /bin/sh -c "/bin/mount -t proc proc /proc && $cmd" \
+	cgexec -g "$cgroups:$uuid" \
+		ip netns exec netns_"$uuid" \
+		unshare -fmuip --mount-proc \
+		chroot "$btrfs_path/$uuid" \
+		/bin/sh -c "/bin/mount -t proc proc /proc && $cmd" \
 		2>&1 | tee "$btrfs_path/$uuid/$uuid.log" || true
 	ip link del dev veth0_"$uuid"
 	ip netns del netns_"$uuid"
