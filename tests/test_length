@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-set -o errexit -o nounset -o pipefail
-
-[[ "$(wc -l < bocker)" -le 100 ]]; echo $?
