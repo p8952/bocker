@@ -71,7 +71,7 @@ function bocker_check() {
 }; function bocker_exec() { #HELP Execute a command in an existing container:\nBOCKER exec <container_id> <command>
 	[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
 	cmd=${@:2} && cid=$(ps xao ppid,pid,cmd | grep "$(ps -u | grep unshare | grep "$1" | awk '{ print $2 }')" | grep -v unshare | awk '{ print $2 }')
-	nsenter -t "$cid" -muinp chroot "$btrfs_path/$1" "$cmd"
+	nsenter -t "$cid" -m -u -i -n -p chroot "$btrfs_path/$1" "$cmd"
 }; function bocker_logs() { #HELP View logs from a container:\nBOCKER logs <container_id>
 	[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
 	cat "$btrfs_path/$1/$1.log"
