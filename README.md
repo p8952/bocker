@@ -92,21 +92,19 @@ $ cat /sys/fs/cgroup/cpu/ps_42152/cpu.shares
 $ cat cat /sys/fs/cgroup/memory/ps_42152/memory.limit_in_bytes
 512000000
 
-
 $ BOCKER_CPU_SHARE=1024 \
 	BOCKER_MEM_LIMIT=1024 \
 	bocker run img_42150 cat /proc/1/cgroup
 ...
 4:memory:/ps_42188
 3:cpuacct,cpu:/ps_42188
+...
 
 $ cat /sys/fs/cgroup/cpu/ps_42188/cpu.shares
 1024
 
 $ cat cat /sys/fs/cgroup/memory/ps_42188/memory.limit_in_bytes
 1024000000
-...
-
 ```
 
 ## Functionality: Currently Implemented
