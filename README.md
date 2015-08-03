@@ -19,9 +19,9 @@ The following packages are needed to run bocker.
 * util-linux >= 2.25.2
 * coreutils >= 7.5
 
-Because most distributions do not ship a new enough version of util-linux you will probably need grab the sources from [here](https://www.kernel.org/pub/linux/utils/util-linux/v2.25/) and compile it yourself.
+Because most distributions do not ship a new enough version of util-linux you will probably need to grab the sources from [here](https://www.kernel.org/pub/linux/utils/util-linux/v2.25/) and compile it yourself.
 
-Additionally your system will need to be configured with the following.
+Additionally your system will need to be configured with the following:
 
 * A btrfs filesystem mounted under `/var/bocker`
 * A network bridge called `bridge0` and an IP of 10.0.0.1/24
@@ -31,7 +31,7 @@ Additionally your system will need to be configured with the following.
 
 For ease of use a Vagrantfile is included which will build the needed environment.
 
-Even if you meet the above prerequisites you probably still want to **run bocker in a virtual machine**. Bocker runs as root and among other things needs to make changes to your network interfaces, routing table, and firewall rules. **I can make no guarantees that it wont trash your system**.
+Even if you meet the above prerequisites you probably still want to **run bocker in a virtual machine**. Bocker runs as root and among other things needs to make changes to your network interfaces, routing table, and firewall rules. **I can make no guarantees that it won't trash your system**.
 
 ## Example Usage
 
