@@ -25,7 +25,7 @@ function bocker_pull() { #HELP Pull an image from Docker Hub:\nBOCKER pull <name
 	id="$(curl -sL -H "Authorization: Token $token" "$registry/repositories/$1/tags/$2" | sed 's/"//g')"
 	[[ "${#id}" -ne 64 ]] && echo "No image named '$1:$2' exists" && exit 1
 	ancestry="$(curl -sL -H "Authorization: Token $token" "$registry/images/$id/ancestry")"
-	IFS=',' && ancestry=(${ancestry//[\[\] \"]/}) && unset IFS; tmp_uuid="$(uuidgen)" && mkdir /tmp/"$tmp_uuid"
+	IFS=',' && ancestry=(${ancestry//[\[\] \"]/}) && IFS=' \n\t'; tmp_uuid="$(uuidgen)" && mkdir /tmp/"$tmp_uuid"
 	for id in "${ancestry[@]}"; do
 		curl -#L -H "Authorization: Token $token" "$registry/images/$id/layer" -o /tmp/"$tmp_uuid"/layer.tar
 		tar xf /tmp/"$tmp_uuid"/layer.tar -C /tmp/"$tmp_uuid" && rm /tmp/"$tmp_uuid"/layer.tar
