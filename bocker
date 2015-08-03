@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -o errexit -o nounset -o pipefail; shopt -s nullglob
-btrfs_path='/var/bocker'; cgroups='cpu,cpuacct,cpuset,memory';
+btrfs_path='/var/bocker' && cgroups='cpu,cpuacct,memory';
 
 function bocker_check() {
 	btrfs subvolume list "$btrfs_path" | grep -qw "$1" && echo 0 || echo 1
@@ -76,8 +76,8 @@ function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <comman
 	echo 'nameserver 8.8.8.8' > "$btrfs_path/$uuid"/etc/resolv.conf
 	echo "$cmd" > "$btrfs_path/$uuid/$uuid.cmd"
 	cgcreate -g "$cgroups:/$uuid"
-	cgset -r cpuset.cpus=0-1 "$uuid" &&	cgset -r cpuset.mems=0 "$uuid"
-	cgset -r memory.limit_in_bytes=512000000 "$uuid"
+	: ${BOCKER_CPU_SHARE:=512} && cgset -r cpu.shares="$BOCKER_CPU_SHARE" "$uuid"
+	: ${BOCKER_MEM_LIMIT:=512} && cgset -r memory.limit_in_bytes="$((BOCKER_MEM_LIMIT * 1000000))" "$uuid"
 	cgexec -g "$cgroups:$uuid" \
 		ip netns exec netns_"$uuid" \
 		unshare -fmuip --mount-proc \
