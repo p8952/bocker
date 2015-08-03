@@ -84,7 +84,6 @@ $ bocker run img_42150 cat /proc/1/cgroup
 ...
 4:memory:/ps_42152
 3:cpuacct,cpu:/ps_42152
-...
 
 $ cat /sys/fs/cgroup/cpu/ps_42152/cpu.shares
 512
@@ -98,7 +97,6 @@ $ BOCKER_CPU_SHARE=1024 \
 ...
 4:memory:/ps_42188
 3:cpuacct,cpu:/ps_42188
-...
 
 $ cat /sys/fs/cgroup/cpu/ps_42188/cpu.shares
 1024
