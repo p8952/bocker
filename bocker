@@ -37,7 +37,7 @@ function bocker_pull() { #HELP Pull an image from Docker Hub:\nBOCKER pull <name
 function bocker_rm() { #HELP Delete an image or container:\nBOCKER rm <image_id or container_id>
 	[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
 	btrfs subvolume delete "$btrfs_path/$1" > /dev/null
-	cgdelete -g $cgroups:/$1 &> /dev/null || true
+	cgdelete -g "$cgroups:/$1" &> /dev/null || true
 	echo "Removed: $1"
 }
 
@@ -61,7 +61,7 @@ function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <comman
 	uuid="ps_$(shuf -i 42002-42254 -n 1)"
 	[[ "$(bocker_check "$1")" == 1 ]] && echo "No image named '$1' exists" && exit 1
 	[[ "$(bocker_check "$uuid")" == 0 ]] && echo "UUID conflict, retrying..." && bocker_run "$@" && return
-	cmd=${@:2} && ip="$(echo "${uuid: -3}" | sed 's/0//g')" && mac="${uuid: -3:1}:${uuid: -2}"
+	cmd="${@:2}" && ip="$(echo "${uuid: -3}" | sed 's/0//g')" && mac="${uuid: -3:1}:${uuid: -2}"
 	ip link add dev veth0_"$uuid" type veth peer name veth1_"$uuid"
 	ip link set dev veth0_"$uuid" up
 	ip link set veth0_"$uuid" master bridge0
@@ -76,8 +76,8 @@ function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <comman
 	echo 'nameserver 8.8.8.8' > "$btrfs_path/$uuid"/etc/resolv.conf
 	echo "$cmd" > "$btrfs_path/$uuid/$uuid.cmd"
 	cgcreate -g "$cgroups:/$uuid"
-	: ${BOCKER_CPU_SHARE:=512} && cgset -r cpu.shares="$BOCKER_CPU_SHARE" "$uuid"
-	: ${BOCKER_MEM_LIMIT:=512} && cgset -r memory.limit_in_bytes="$((BOCKER_MEM_LIMIT * 1000000))" "$uuid"
+	: "${BOCKER_CPU_SHARE:=512}" && cgset -r cpu.shares="$BOCKER_CPU_SHARE" "$uuid"
+	: "${BOCKER_MEM_LIMIT:=512}" && cgset -r memory.limit_in_bytes="$((BOCKER_MEM_LIMIT * 1000000))" "$uuid"
 	cgexec -g "$cgroups:$uuid" \
 		ip netns exec netns_"$uuid" \
 		unshare -fmuip --mount-proc \
@@ -88,10 +88,11 @@ function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <comman
 	ip netns del netns_"$uuid"
 }
 
-function bocker_exec() { #HELP Execute a command in an existing container:\nBOCKER exec <container_id> <command>
+function bocker_exec() { #HELP Execute a command in a running container:\nBOCKER exec <container_id> <command>
 	[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
-	cmd=${@:2} && cid=$(ps xao ppid,pid,cmd | grep "$(ps -u | grep unshare | grep "$1" | awk '{ print $2 }')" | grep -v unshare | awk '{ print $2 }')
-	nsenter -t "$cid" -m -u -i -n -p chroot "$btrfs_path/$1" "$cmd"
+	cid="$(ps o ppid,pid | grep "^$(ps o pid,cmd | grep -E "^\ *[0-9]+ unshare.*$1" | awk '{print $1}')" | awk '{print $2}')"
+	[[ ! "$cid" =~ ^\ *[0-9]+$ ]] && echo "Container '$1' exists but is not running" && exit 1
+	nsenter -t "$cid" -m -u -i -n -p chroot "$btrfs_path/$1" "${@:2}"
 }
 
 function bocker_logs() { #HELP View logs from a container:\nBOCKER logs <container_id>

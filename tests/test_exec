@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -o errexit -o nounset -o pipefail
+
+img="$(./bocker init ~/base-image | awk '{print $2}')"
+./bocker images | grep -qw "$img"
+[[ "$?" == 0 ]]
+
+# ▼ ▼ ▼ Race condition waiting to happen ▼ ▼ ▼
+./bocker run "$img" "sleep 5 && ps aux" &
+sleep 2
+ps="$(./bocker ps | grep 'sleep 5' | awk '{print $1}')"
+exec="$(./bocker exec "$ps" ps aux | wc -l)"
+[[ "$exec" == "4" ]]
+sleep 3
+# ▲ ▲ ▲ Race condition waiting to happen ▲ ▲ ▲
+
+./bocker run "$img" ps aux
+ps="$(./bocker ps | grep 'ps aux' | awk '{print $1}')"
+exec="$(./bocker exec "$ps" ps aux)" || true
+[[ "$exec" == "Container '$ps' exists but is not running" ]]
+
+exec="$(./bocker exec foo ps aux)" || true
+[[ "$exec" == "No container named 'foo' exists" ]]
