@@ -88,7 +88,7 @@ $ bocker run img_42150 cat /proc/1/cgroup
 $ cat /sys/fs/cgroup/cpu/ps_42152/cpu.shares
 512
 
-$ cat cat /sys/fs/cgroup/memory/ps_42152/memory.limit_in_bytes
+$ cat /sys/fs/cgroup/memory/ps_42152/memory.limit_in_bytes
 512000000
 
 $ BOCKER_CPU_SHARE=1024 \
@@ -101,7 +101,7 @@ $ BOCKER_CPU_SHARE=1024 \
 $ cat /sys/fs/cgroup/cpu/ps_42188/cpu.shares
 1024
 
-$ cat cat /sys/fs/cgroup/memory/ps_42188/memory.limit_in_bytes
+$ cat /sys/fs/cgroup/memory/ps_42188/memory.limit_in_bytes
 1024000000
 ```
 
