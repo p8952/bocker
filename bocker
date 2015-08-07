@@ -59,18 +59,17 @@ function bocker_ps() { #HELP List containers:\nBOCKER ps
 }
 
 function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <command>
-	uuid="ps_$(shuf -i 42002-42254 -n 1)"
 	[[ "$(bocker_check "$1")" == 1 ]] && echo "No image named '$1' exists" && exit 1
-	[[ "$(bocker_check "$uuid")" == 0 ]] && echo "UUID conflict, retrying..." && bocker_run "$@" && return
-	cmd="${@:2}" && ip="$(echo "${uuid: -3}" | sed 's/0//g')" && mac="${uuid: -3:1}:${uuid: -2}"
+	lastuuid=$(ls -d "$btrfs_path/ps_"????? 2>/dev/null | sed -e 's/ps_//' | awk -F '/' '{ print $4 }' | sort -nr | head -1) && [[ -z "$lastuuid" ]] && uid=42002 || uid=$((1+$lastuuid))
+	uuid="ps_$uid" && cmd="${@:2}" && ip_o3=$(( ($uid-42000) / 255 )) && ip_o4=$(( ($uid-42000) % 255 )) && mac="$ip_o3":$(echo "obase=16;$ip_o4" | bc)
 	ip link add dev veth0_"$uuid" type veth peer name veth1_"$uuid"
 	ip link set dev veth0_"$uuid" up
 	ip link set veth0_"$uuid" master bridge0
 	ip netns add netns_"$uuid"
 	ip link set veth1_"$uuid" netns netns_"$uuid"
 	ip netns exec netns_"$uuid" ip link set dev lo up
-	ip netns exec netns_"$uuid" ip link set veth1_"$uuid" address 02:42:ac:11:00"$mac"
-	ip netns exec netns_"$uuid" ip addr add 10.0.0."$ip"/24 dev veth1_"$uuid"
+	ip netns exec netns_"$uuid" ip link set veth1_"$uuid" address 02:42:ac:11:0"$mac"
+	ip netns exec netns_"$uuid" ip addr add 10.0."$ip_o3"."$ip_o4"/16 dev veth1_"$uuid"
 	ip netns exec netns_"$uuid" ip link set dev veth1_"$uuid" up
 	ip netns exec netns_"$uuid" ip route add default via 10.0.0.1
 	btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
@@ -108,12 +107,17 @@ function bocker_commit() { #HELP Commit a container to an image:\nBOCKER commit 
 	echo "Created: $2"
 }
 
+function bocker_cleanup() { #HELP Delete leftovers of improperly shutdown containers:\nBOCKER cleanup
+	for ns in $(ip netns show | grep netns_ps_); do [[ ! -d "$btrfs_path/${ns#netns_}" ]] && ip netns del "$ns"; done
+	for iface in $(ifconfig | grep veth0_ps_ | awk '{ print $1 }'); do [[ ! -d "$btrfs_path/${iface#veth0_}" ]] && ip link del dev "$iface"; done
+}
+
 function bocker_help() { #HELP Display this message:\nBOCKER help
 	sed -n "s/^.*#HELP\\s//p;" < "$1" | sed "s/\\\\n/\n\t/g;s/$/\n/;s!BOCKER!${1/!/\\!}!g"
 }
 
 [[ -z "${1-}" ]] && bocker_help "$0"
 case $1 in
-	pull|init|rm|images|ps|run|exec|logs|commit) bocker_"$1" "${@:2}" ;;
+	pull|init|rm|images|ps|run|exec|logs|commit|cleanup) bocker_"$1" "${@:2}" ;;
 	*) bocker_help "$0" ;;
 esac
