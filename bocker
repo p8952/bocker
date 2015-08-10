@@ -82,8 +82,7 @@ function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <comman
 		ip netns exec netns_"$uuid" \
 		unshare -fmuip --mount-proc \
 		chroot "$btrfs_path/$uuid" \
-		/bin/sh -c "/bin/mount -t proc proc /proc && $cmd" \
-		2>&1 | tee "$btrfs_path/$uuid/$uuid.log" || true
+		/bin/sh -c "/bin/mount -t proc proc /proc && $cmd" || true
 	ip link del dev veth0_"$uuid"
 	ip netns del netns_"$uuid"
 }
@@ -107,6 +106,18 @@ function bocker_commit() { #HELP Commit a container to an image:\nBOCKER commit 
 	echo "Created: $2"
 }
 
+function bocker_route() { #HELP Ensure outgoing route exists for containers:\nBOCKER route [device]
+	[[ $# -lt 1 ]] && rdev='eth' || rdev="$1"
+	iface=$(ip addr show | grep "scope global $rdev" | sed 's/\// /g' | awk '{ print $2 }')
+	iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -o eth1 -j SNAT --to-source $iface
+	echo "Set outgoing interface to $iface"
+}
+
+function bocker_info() { #HELP Display container information:\nBOCKER info <container_id>
+	[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
+	echo "Container: $1\nNetworking: "$(ip netns exec netns_$1 ip addr show | grep global | grep veth1) | sed "s/\\\\n/\n\t/g"
+}
+
 function bocker_cleanup() { #HELP Delete leftovers of improperly shutdown containers:\nBOCKER cleanup
 	for ns in $(ip netns show | grep netns_ps_); do [[ ! -d "$btrfs_path/${ns#netns_}" ]] && ip netns del "$ns"; done
 	for iface in $(ifconfig | grep veth0_ps_ | awk '{ print $1 }'); do [[ ! -d "$btrfs_path/${iface#veth0_}" ]] && ip link del dev "$iface"; done
@@ -116,8 +127,8 @@ function bocker_help() { #HELP Display this message:\nBOCKER help
 	sed -n "s/^.*#HELP\\s//p;" < "$1" | sed "s/\\\\n/\n\t/g;s/$/\n/;s!BOCKER!${1/!/\\!}!g"
 }
 
-[[ -z "${1-}" ]] && bocker_help "$0"
+[[ -z "${1-}" ]] && bocker_help "$0" || \
 case $1 in
-	pull|init|rm|images|ps|run|exec|logs|commit|cleanup) bocker_"$1" "${@:2}" ;;
+	pull|init|rm|images|ps|run|exec|route|logs|commit|info|cleanup) bocker_"$1" "${@:2}" ;;
 	*) bocker_help "$0" ;;
 esac
