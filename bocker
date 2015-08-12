@@ -38,6 +38,7 @@ function bocker_pull() { #HELP Pull an image from Docker Hub:\nBOCKER pull <name
 function bocker_rm() { #HELP Delete an image or container:\nBOCKER rm <image_id or container_id>
 	can_name=$(readlink -f "$btrfs_path/$1") && [[ $can_name == "$btrfs_path/$1" ]] && ctr_name="$1" || ctr_name="${can_name##*/}"
 	[[ "$(bocker_check "$ctr_name")" == 1 ]] && echo "No container named '$ctr_name' exists" && exit 1
+	iptables-save | grep -v "${ctr_name}_" | iptables-restore
 	for name in $(find $btrfs_path -maxdepth 1 -lname "$btrfs_path/$ctr_name"); do unlink "$name"; done
 	btrfs subvolume delete "$btrfs_path/$ctr_name" > /dev/null
 	cgdelete -g "$cgroups:/$ctr_name" &> /dev/null || true
@@ -137,6 +138,14 @@ function bocker_route() { #HELP Ensure outgoing route exists for containers:\nBO
 	echo "Set outgoing interface to $iface"
 }
 
+function bocker_export() { #HELP Make a container's port available through host:\nBOCKER export <container_id> <port> <host_port>
+	[[ $# -lt 3 ]] && echo "Need more arguments" && exit 1
+	can_name=$(readlink -f "$btrfs_path/$1") && [[ $can_name == "$btrfs_path/$1" ]] && ctr_name="$1" || ctr_name="${can_name##*/}"
+	[[ "$(bocker_check "$ctr_name")" == 1 ]] && echo "No container named '$ctr_name' exists" && exit 1
+	iface=$(ip netns exec netns_$ctr_name ip addr show  | grep "10.0." | sed 's/\// /g' | awk '{ print $2 }')
+	iptables -t nat -A PREROUTING -p tcp -m tcp --dport "$3"  -j DNAT --to-destination $iface:$2 -m comment --comment ${ctr_name}_$3_$2
+}
+
 function bocker_info() { #HELP Display container information:\nBOCKER info <container_id>
 	can_name=$(readlink -f "$btrfs_path/$1") && [[ $can_name == "$btrfs_path/$1" ]] && ctr_name="$1" || ctr_name="${can_name##*/}"
 	[[ "$(bocker_check "$ctr_name")" == 1 ]] && echo "No container named '$ctr_name' exists" && exit 1
@@ -154,6 +163,6 @@ function bocker_help() { #HELP Display this message:\nBOCKER help
 
 [[ -z "${1-}" ]] && bocker_help "$0" || \
 case $1 in
-	pull|init|rm|images|ps|run|start|exec|name|route|logs|commit|info|cleanup) bocker_"$1" "${@:2}" ;;
+	pull|init|rm|images|ps|run|start|exec|name|route|export|logs|commit|info|cleanup) bocker_"$1" "${@:2}" ;;
 	*) bocker_help "$0" ;;
 esac
