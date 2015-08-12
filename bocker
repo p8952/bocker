@@ -56,8 +56,10 @@ function bocker_images() { #HELP List images:\nBOCKER images
 function bocker_ps() { #HELP List containers:\nBOCKER ps
 	echo -e "CONTAINER_ID\t\tCOMMAND"
 	for ps in "$btrfs_path"/ps_*; do
-		ps=$(basename "$ps")
-		echo -e "$ps\t\t$(cat "$btrfs_path/$ps/$ps.cmd")"
+		ps=$(basename "$ps") && echo -n -e "$ps "
+		names=$(find $btrfs_path -maxdepth 1 -lname "$btrfs_path/$ps")
+		[[ -z "$names" ]] || echo -n $(echo -e -n "\t("; for name in $names; do echo -n "${name##*/}"; done; echo -n ")")
+		echo -e "\t\t$(cat "$btrfs_path/$ps/$ps.cmd")"
 	done
 }
 
