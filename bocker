@@ -64,7 +64,7 @@ function bocker_ps() { #HELP List containers:\nBOCKER ps
 }
 
 function bocker_ex() {
-	uuid="$1"; mac="$2"; ip_op3="$3"; ip_op4="$4"; cmd="$5"
+	uuid="$1"; mac="$2"; ip_o3="$3"; ip_o4="$4"; cmd="$5"
 	ip link add dev veth0_"$uuid" type veth peer name veth1_"$uuid"
 	ip link set dev veth0_"$uuid" up
 	ip link set veth0_"$uuid" master bridge0
