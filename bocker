@@ -133,10 +133,10 @@ function bocker_commit() { #HELP Commit a container to an image:\nBOCKER commit 
 }
 
 function bocker_route() { #HELP Ensure outgoing route exists for containers:\nBOCKER route [device]
-	[[ $# -lt 1 ]] && rdev='eth' || rdev="$1"
+	[[ $# -lt 1 ]] && rdev='eth0' || rdev="$1"
 	iface=$(ip addr show | grep "scope global $rdev" | sed 's/\// /g' | awk '{ print $2 }')
-	ip link add bridge0 type bridge && ip addr add 10.0.0.1/24 dev bridge0 && ip link set bridge0 up
-	iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -o eth1 -j SNAT --to-source $iface
+	ip link add bridge0 type bridge && ip addr add 10.0.0.1/16 dev bridge0 && ip link set bridge0 up
+	iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -o $rdev -j SNAT --to-source $iface
 	echo "Set outgoing interface to $iface"
 }
 
