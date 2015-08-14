@@ -36,10 +36,13 @@ function bocker_pull() { #HELP Pull an image from Docker Hub:\nBOCKER pull <name
 }
 
 function bocker_rm() { #HELP Delete an image or container:\nBOCKER rm <image_id or container_id>
-	[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
-	btrfs subvolume delete "$btrfs_path/$1" > /dev/null
-	cgdelete -g "$cgroups:/$1" &> /dev/null || true
-	echo "Removed: $1"
+	can_name=$(readlink -f "$btrfs_path/$1") && [[ $can_name == "$btrfs_path/$1" ]] && ctr_name="$1" || ctr_name="${can_name##*/}"
+	[[ "$(bocker_check "$ctr_name")" == 1 ]] && echo "No container named '$ctr_name' exists" && exit 1
+	iptables-save | grep -v "${ctr_name}_" | iptables-restore
+	for name in $(find $btrfs_path -maxdepth 1 -lname "$btrfs_path/$ctr_name"); do unlink "$name"; done
+	btrfs subvolume delete "$btrfs_path/$ctr_name" > /dev/null
+	cgdelete -g "$cgroups:/$ctr_name" &> /dev/null || true
+	echo "Removed: $ctr_name"
 }
 
 function bocker_images() { #HELP List images:\nBOCKER images
@@ -53,29 +56,25 @@ function bocker_images() { #HELP List images:\nBOCKER images
 function bocker_ps() { #HELP List containers:\nBOCKER ps
 	echo -e "CONTAINER_ID\t\tCOMMAND"
 	for ps in "$btrfs_path"/ps_*; do
-		ps=$(basename "$ps")
-		echo -e "$ps\t\t$(cat "$btrfs_path/$ps/$ps.cmd")"
+		ps=$(basename "$ps") && echo -n -e "$ps "
+		names=$(find $btrfs_path -maxdepth 1 -lname "$btrfs_path/$ps")
+		[[ -z "$names" ]] || echo -n $(echo -e -n "\t("; for name in $names; do echo -n "${name##*/}"; done; echo -n ")")
+		echo -e "\t\t$(cat "$btrfs_path/$ps/$ps.cmd")"
 	done
 }
 
-function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <command>
-	uuid="ps_$(shuf -i 42002-42254 -n 1)"
-	[[ "$(bocker_check "$1")" == 1 ]] && echo "No image named '$1' exists" && exit 1
-	[[ "$(bocker_check "$uuid")" == 0 ]] && echo "UUID conflict, retrying..." && bocker_run "$@" && return
-	cmd="${@:2}" && ip="$(echo "${uuid: -3}" | sed 's/0//g')" && mac="${uuid: -3:1}:${uuid: -2}"
+function bocker_ex() {
+	uuid="$1"; mac="$2"; ip_o3="$3"; ip_o4="$4"; cmd="$5"
 	ip link add dev veth0_"$uuid" type veth peer name veth1_"$uuid"
 	ip link set dev veth0_"$uuid" up
 	ip link set veth0_"$uuid" master bridge0
 	ip netns add netns_"$uuid"
 	ip link set veth1_"$uuid" netns netns_"$uuid"
 	ip netns exec netns_"$uuid" ip link set dev lo up
-	ip netns exec netns_"$uuid" ip link set veth1_"$uuid" address 02:42:ac:11:00"$mac"
-	ip netns exec netns_"$uuid" ip addr add 10.0.0."$ip"/24 dev veth1_"$uuid"
+	ip netns exec netns_"$uuid" ip link set veth1_"$uuid" address 02:42:ac:11:0"$mac"
+	ip netns exec netns_"$uuid" ip addr add 10.0."$ip_o3"."$ip_o4"/16 dev veth1_"$uuid"
 	ip netns exec netns_"$uuid" ip link set dev veth1_"$uuid" up
 	ip netns exec netns_"$uuid" ip route add default via 10.0.0.1
-	btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
-	echo 'nameserver 8.8.8.8' > "$btrfs_path/$uuid"/etc/resolv.conf
-	echo "$cmd" > "$btrfs_path/$uuid/$uuid.cmd"
 	cgcreate -g "$cgroups:/$uuid"
 	: "${BOCKER_CPU_SHARE:=512}" && cgset -r cpu.shares="$BOCKER_CPU_SHARE" "$uuid"
 	: "${BOCKER_MEM_LIMIT:=512}" && cgset -r memory.limit_in_bytes="$((BOCKER_MEM_LIMIT * 1000000))" "$uuid"
@@ -83,37 +82,88 @@ function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <comman
 		ip netns exec netns_"$uuid" \
 		unshare -fmuip --mount-proc \
 		chroot "$btrfs_path/$uuid" \
-		/bin/sh -c "/bin/mount -t proc proc /proc && $cmd" \
-		2>&1 | tee "$btrfs_path/$uuid/$uuid.log" || true
+		/bin/sh -c "/bin/mount -t proc proc /proc && $cmd" || true
 	ip link del dev veth0_"$uuid"
 	ip netns del netns_"$uuid"
 }
 
+function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <command>
+	[[ "$(bocker_check "$1")" == 1 ]] && echo "No image named '$1' exists" && exit 1
+	lastuuid=$(ls -d "$btrfs_path/ps_"????? 2>/dev/null | sed -e 's/ps_//' | awk -F '/' '{ print $4 }' | sort -nr | head -1) && [[ -z "$lastuuid" ]] && uid=42002 || uid=$((1+$lastuuid))
+	uuid="ps_$uid" && cmd="${@:2}" && ip_o3=$(( ($uid-42000) / 255 )) && ip_o4=$(( ($uid-42000) % 255 )) && mac="$ip_o3":$(echo "obase=16;$ip_o4" | bc)
+	btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
+	echo 'nameserver 8.8.8.8' > "$btrfs_path/$uuid"/etc/resolv.conf
+	echo "$cmd" > "$btrfs_path/$uuid/$uuid.cmd"
+	bocker_ex "$uuid" "$mac" "$ip_o3" "$ip_o4" "$cmd"
+}
+
+function bocker_start() { #HELP Start an existing container:\nBOCKER start <container_id>
+	can_name=$(readlink -f "$btrfs_path/$1") && [[ $can_name == "$btrfs_path/$1" ]] && ctr_name="$1" || ctr_name="${can_name##*/}"
+	[[ "$(bocker_check "$ctr_name")" == 1 ]] && echo "No container named '$ctr_name' exists" && exit 1
+	uuid="$ctr_name" && uid=$(echo $uuid | sed 's/ps_//') && ip_o3=$(( ($uid-42000) / 255 )) && ip_o4=$(( ($uid-42000) % 255 )) && mac="$ip_o3":$(echo "obase=16;$ip_o4" | bc)
+	cmd=$(cat "$btrfs_path/$uuid/$uuid.cmd")
+	bocker_ex "$uuid" "$mac" "$ip_o3" "$ip_o4" "$cmd"
+}
+
 function bocker_exec() { #HELP Execute a command in a running container:\nBOCKER exec <container_id> <command>
+	can_name=$(readlink -f "$btrfs_path/$1") && [[ $can_name == "$btrfs_path/$1" ]] && ctr_name="$1" || ctr_name="${can_name##*/}"
+	[[ "$(bocker_check "$ctr_name")" == 1 ]] && echo "No container named '$ctr_name' exists" && exit 1
+	cid="$(ps o ppid,pid | grep "^$(ps o pid,cmd | grep -E "^\ *[0-9]+ unshare.*$ctr_name" | awk '{print $1}')" | awk '{print $2}')"
+	[[ ! "$cid" =~ ^\ *[0-9]+$ ]] && echo "Container '$ctr_name' exists but is not running" && exit 1
+	nsenter -t "$cid" -m -u -i -n -p chroot "$btrfs_path/$ctr_name" "${@:2}"
+}
+
+function bocker_name() { #HELP Give a symbolic name to a container:\nBOCKER name <container_id> <name>
 	[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
-	cid="$(ps o ppid,pid | grep "^$(ps o pid,cmd | grep -E "^\ *[0-9]+ unshare.*$1" | awk '{print $1}')" | awk '{print $2}')"
-	[[ ! "$cid" =~ ^\ *[0-9]+$ ]] && echo "Container '$1' exists but is not running" && exit 1
-	nsenter -t "$cid" -m -u -i -n -p chroot "$btrfs_path/$1" "${@:2}"
+	ln -s "$btrfs_path/$1" "$btrfs_path/$2"
 }
 
 function bocker_logs() { #HELP View logs from a container:\nBOCKER logs <container_id>
-	[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
-	cat "$btrfs_path/$1/$1.log"
+	can_name=$(readlink -f "$btrfs_path/$1") && [[ $can_name == "$btrfs_path/$1" ]] && ctr_name="$1" || ctr_name="${can_name##*/}"
+	[[ "$(bocker_check "$ctr_name")" == 1 ]] && echo "No container named '$ctr_name' exists" && exit 1
+	cat "$btrfs_path/$ctr_name/$ctr_name.log"
 }
 
 function bocker_commit() { #HELP Commit a container to an image:\nBOCKER commit <container_id> <image_id>
+	can_name=$(readlink -f "$btrfs_path/$1") && [[ $can_name == "$btrfs_path/$1" ]] && ctr_name="$1" || ctr_name="${can_name##*/}"
 	[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
-	[[ "$(bocker_check "$2")" == 1 ]] && echo "No image named '$2' exists" && exit 1
-	bocker_rm "$2" && btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$2" > /dev/null
+	bocker_rm "$2" && btrfs subvolume snapshot "$btrfs_path/$ctr_name" "$btrfs_path/$2" > /dev/null
 	echo "Created: $2"
+}
+
+function bocker_route() { #HELP Ensure outgoing route exists for containers:\nBOCKER route [device]
+	[[ $# -lt 1 ]] && rdev='eth0' || rdev="$1"
+	iface=$(ip addr show | grep "scope global $rdev" | sed 's/\// /g' | awk '{ print $2 }')
+	ip link add bridge0 type bridge && ip addr add 10.0.0.1/16 dev bridge0 && ip link set bridge0 up
+	iptables -t nat -A POSTROUTING -s 10.0.0.0/16 -o $rdev -j SNAT --to-source $iface
+	echo "Set outgoing interface to $iface"
+}
+
+function bocker_export() { #HELP Make a container's port available through host:\nBOCKER export <container_id> <port> <host_port>
+	[[ $# -lt 3 ]] && echo "Need more arguments" && exit 1
+	can_name=$(readlink -f "$btrfs_path/$1") && [[ $can_name == "$btrfs_path/$1" ]] && ctr_name="$1" || ctr_name="${can_name##*/}"
+	[[ "$(bocker_check "$ctr_name")" == 1 ]] && echo "No container named '$ctr_name' exists" && exit 1
+	iface=$(ip netns exec netns_$ctr_name ip addr show  | grep "10.0." | sed 's/\// /g' | awk '{ print $2 }')
+	iptables -t nat -A PREROUTING -p tcp -m tcp --dport "$3"  -j DNAT --to-destination $iface:$2 -m comment --comment ${ctr_name}_$3_$2
+}
+
+function bocker_info() { #HELP Display container information:\nBOCKER info <container_id>
+	can_name=$(readlink -f "$btrfs_path/$1") && [[ $can_name == "$btrfs_path/$1" ]] && ctr_name="$1" || ctr_name="${can_name##*/}"
+	[[ "$(bocker_check "$ctr_name")" == 1 ]] && echo "No container named '$ctr_name' exists" && exit 1
+	echo "Container: $ctr_name\nNetworking: "$(ip netns exec netns_$ctr_name ip addr show | grep global | grep veth1) | sed "s/\\\\n/\n\t/g"
+}
+
+function bocker_cleanup() { #HELP Delete leftovers of improperly shutdown containers:\nBOCKER cleanup
+	for ns in $(ip netns show | grep netns_ps_); do [[ ! -d "$btrfs_path/${ns#netns_}" ]] && ip netns del "$ns"; done
+	for iface in $(ifconfig | grep veth0_ps_ | awk '{ print $1 }'); do [[ ! -d "$btrfs_path/${iface#veth0_}" ]] && ip link del dev "$iface"; done
 }
 
 function bocker_help() { #HELP Display this message:\nBOCKER help
 	sed -n "s/^.*#HELP\\s//p;" < "$1" | sed "s/\\\\n/\n\t/g;s/$/\n/;s!BOCKER!${1/!/\\!}!g"
 }
 
-[[ -z "${1-}" ]] && bocker_help "$0"
+[[ -z "${1-}" ]] && bocker_help "$0" || \
 case $1 in
-	pull|init|rm|images|ps|run|exec|logs|commit) bocker_"$1" "${@:2}" ;;
+	pull|init|rm|images|ps|run|start|exec|name|route|export|logs|commit|info|cleanup) bocker_"$1" "${@:2}" ;;
 	*) bocker_help "$0" ;;
 esac
