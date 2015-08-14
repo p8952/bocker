@@ -127,7 +127,6 @@ function bocker_logs() { #HELP View logs from a container:\nBOCKER logs <contain
 function bocker_commit() { #HELP Commit a container to an image:\nBOCKER commit <container_id> <image_id>
 	can_name=$(readlink -f "$btrfs_path/$1") && [[ $can_name == "$btrfs_path/$1" ]] && ctr_name="$1" || ctr_name="${can_name##*/}"
 	[[ "$(bocker_check "$1")" == 1 ]] && echo "No container named '$1' exists" && exit 1
-	[[ "$(bocker_check "$2")" == 1 ]] && echo "No image named '$2' exists" && exit 1
 	bocker_rm "$2" && btrfs subvolume snapshot "$btrfs_path/$ctr_name" "$btrfs_path/$2" > /dev/null
 	echo "Created: $2"
 }
