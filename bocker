@@ -63,6 +63,11 @@ function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <comman
 	[[ "$(bocker_check "$1")" == 1 ]] && echo "No image named '$1' exists" && exit 1
 	[[ "$(bocker_check "$uuid")" == 0 ]] && echo "UUID conflict, retrying..." && bocker_run "$@" && return
 	cmd="${@:2}" && ip="$(echo "${uuid: -3}" | sed 's/0//g')" && mac="${uuid: -3:1}:${uuid: -2}"
+	ip addr list dev bridge0 &> /dev/null || (
+		brctl addbr bridge0
+		ip addr add 10.0.0.1/24 dev bridge0
+		ip link set dev bridge0 up
+	)
 	ip link add dev veth0_"$uuid" type veth peer name veth1_"$uuid"
 	ip link set dev veth0_"$uuid" up
 	ip link set veth0_"$uuid" master bridge0

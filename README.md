@@ -11,6 +11,7 @@ Docker implemented in around 100 lines of bash.
 
 The following packages are needed to run bocker.
 
+* [bridge-utils][]
 * btrfs-progs
 * curl
 * iproute2
@@ -24,7 +25,6 @@ Because most distributions do not ship a new enough version of util-linux you wi
 Additionally your system will need to be configured with the following:
 
 * A btrfs filesystem mounted under `/var/bocker`
-* A network bridge called `bridge0` and an IP of 10.0.0.1/24
 * IP forwarding enabled in `/proc/sys/net/ipv4/ip_forward`
 * A firewall routing traffic from `bridge0` to a physical interface.
 
@@ -142,3 +142,5 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+[bridge-utils]: http://sourceforge.net/projects/bridge/
