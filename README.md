@@ -26,7 +26,6 @@ Because most distributions do not ship a new enough version of util-linux you wi
 Additionally your system will need to be configured with the following:
 
 * A btrfs filesystem mounted under `/var/bocker`
-* A firewall routing traffic from `bridge0` to a physical interface.
 
 For ease of use a Vagrantfile is included which will build the needed environment.
 
