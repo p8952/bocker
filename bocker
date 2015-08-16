@@ -63,15 +63,20 @@ function bocker_run() { #HELP Create a container:\nBOCKER run <image_id> <comman
 	[[ "$(bocker_check "$1")" == 1 ]] && echo "No image named '$1' exists" && exit 1
 	[[ "$(bocker_check "$uuid")" == 0 ]] && echo "UUID conflict, retrying..." && bocker_run "$@" && return
 	cmd="${@:2}" && ip="$(echo "${uuid: -3}" | sed 's/0//g')" && mac="${uuid: -3:1}:${uuid: -2}"
+	sysctl net.ipv4.conf.all.forwarding=1
+	ip addr list dev bridge0 &> /dev/null || (
+		brctl addbr bridge0
+		ip addr add 10.0.0.1/24 dev bridge0
+		ip link set dev bridge0 up
+		iptables -t nat -A POSTROUTING -s 10.0.0.0/24 ! -o bridge0 -j MASQUERADE
+	)
 	ip link add dev veth0_"$uuid" type veth peer name veth1_"$uuid"
-	ip link set dev veth0_"$uuid" up
-	ip link set veth0_"$uuid" master bridge0
+	ip link set dev veth0_"$uuid" up master bridge0
 	ip netns add netns_"$uuid"
 	ip link set veth1_"$uuid" netns netns_"$uuid"
 	ip netns exec netns_"$uuid" ip link set dev lo up
-	ip netns exec netns_"$uuid" ip link set veth1_"$uuid" address 02:42:ac:11:00"$mac"
 	ip netns exec netns_"$uuid" ip addr add 10.0.0."$ip"/24 dev veth1_"$uuid"
-	ip netns exec netns_"$uuid" ip link set dev veth1_"$uuid" up
+	ip netns exec netns_"$uuid" ip link set dev veth1_"$uuid" up address 02:42:ac:11:00"$mac"
 	ip netns exec netns_"$uuid" ip route add default via 10.0.0.1
 	btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
 	echo 'nameserver 8.8.8.8' > "$btrfs_path/$uuid"/etc/resolv.conf
